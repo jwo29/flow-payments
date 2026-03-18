@@ -2,7 +2,6 @@ package com.january.ledgerflow.user.controller;
 
 import com.january.ledgerflow.user.dto.UserCreateRequestDTO;
 import com.january.ledgerflow.user.dto.UserResponseDTO;
-import com.january.ledgerflow.user.repository.UserRepository;
 import com.january.ledgerflow.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

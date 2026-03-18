@@ -1,5 +1,6 @@
 package com.january.ledgerflow.transaction.domain;
 
+import com.january.ledgerflow.transaction.vo.EntryType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -40,10 +41,10 @@ public class AccountLedger {
 
     private LocalDateTime createdAt;
 
-    public AccountLedger(Long accountId, Long transactionId, String entryType, BigDecimal amount, BigDecimal balanceAfter) {
+    public AccountLedger(Long accountId, Long transactionId, EntryType entryType, BigDecimal amount, BigDecimal balanceAfter) {
         this.accountId = accountId;
         this.transactionId = transactionId;
-        this.entryType = entryType;
+        this.entryType = entryType.name();
         this.amount = amount;
         this.balanceAfter = balanceAfter;
         this.createdAt = LocalDateTime.now();

@@ -3,10 +3,7 @@ package com.january.ledgerflow.account.controller;
 import com.january.ledgerflow.account.dto.AccountCreateRequestDTO;
 import com.january.ledgerflow.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/accounts")

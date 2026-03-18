@@ -5,6 +5,7 @@ import com.january.ledgerflow.account.dto.AccountCreateRequestDTO;
 import com.january.ledgerflow.account.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 
 @Service
@@ -13,6 +14,7 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
 
+    @Transactional
     public Long createAccount(@RequestBody AccountCreateRequestDTO accountCreateRequestDTO) {
         accountRepository.findByAccountNumber(accountCreateRequestDTO.getAccountNumber())
                 .ifPresent(account -> {
@@ -28,4 +30,5 @@ public class AccountService {
 
         return savedAccount.getAccountId();
     }
+
 }
