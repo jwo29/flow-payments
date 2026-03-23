@@ -24,7 +24,6 @@ public class TransactionEventListener {
 
         try {
 
-
             // 1. 메시징 파싱
             TransactionEventDTO transactionEventDTO = objectMapper.readValue(
                     message.getBody(),
