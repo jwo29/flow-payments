@@ -1,4 +1,4 @@
-package com.january.ledgerflow.pg.dto;
+package com.january.ledgerflow.payment.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,7 +7,8 @@ import java.math.BigDecimal;
 
 @Getter
 @AllArgsConstructor
-public class PgCancelRequestDTO {
+public class PaymentRefundRequestDTO {
+    private Long paymentId;
     private String pgTransactionId;
     private BigDecimal amount;
     private String reason;

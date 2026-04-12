@@ -1,10 +1,15 @@
 package com.january.ledgerflow.payment.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.math.BigDecimal;
+
 @Getter
+@AllArgsConstructor
 public class PaymentRefundResponseDTO {
     private Long paymentId;
     private String paymentStatus;
-    private Integer refundAmount;
+    private String orderId;
+    private BigDecimal amount;
 }

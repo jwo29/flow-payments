@@ -36,8 +36,6 @@ public class TransactionService {
     private final LedgerRepository ledgerRepository;
     private final OutboxEventRepository outboxEventRepository;
 
-    private final TransactionEventPublisher transactionEventPublisher;
-
     @Transactional
     public void deposit(DepositRequestDTO depositRequestDTO) {
         Account account = accountRepository.findByIdForUpdate(depositRequestDTO.getAccountId())
