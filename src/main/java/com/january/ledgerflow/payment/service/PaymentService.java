@@ -9,7 +9,6 @@ import com.january.ledgerflow.pg.dto.PgApproveResponseDTO;
 import com.january.ledgerflow.pg.dto.PgCancelRequestDTO;
 import com.january.ledgerflow.pg.dto.PgCancelResponseDTO;
 import com.january.ledgerflow.transaction.service.TransactionService;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -50,8 +49,6 @@ public class PaymentService {
         );
     }
 
-
-    @Transactional
     public PaymentCancelResponseDTO cancel(PaymentCancelRequestDTO paymentCancelRequestDTO) {
 
 
@@ -78,7 +75,6 @@ public class PaymentService {
 
     }
 
-    @Transactional
     public PaymentRefundResponseDTO refund(PaymentRefundRequestDTO paymentRefundRequestDTO) {
 
         Payment payment = paymentTransactionService.getCancelablePayment(paymentRefundRequestDTO.getPaymentId());
