@@ -1,9 +1,10 @@
 package com.january.ledgerflow.payment.domain;
 
+import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
 import com.january.ledgerflow.payment.vo.PaymentStatus;
+import com.january.ledgerflow.pg.dto.PgApproveResponseDTO;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -41,27 +42,25 @@ public class Payment {
     private LocalDateTime approvedAt;
     private LocalDateTime canceledAt;
 
+    public static Payment request(PaymentApproveRequestDTO requestDTO) {
+        Payment p = new Payment();
+        p.merchantId = requestDTO.getMerchantId();
+        p.userId = requestDTO.getUserId();
+        p.accountId = requestDTO.getAccountId();
+        p.orderId = requestDTO.getOrderId();
+        p.amount = requestDTO.getAmount();
+        p.status = PaymentStatus.REQUESTED;
+
+        return p;
+    }
+
     /* ==========================
            Factory Method
        ========================== */
-    public static Payment approve(String merchantId,
-                                   Long userId,
-                                   Long accountId,
-                                   BigDecimal amount,
-                                   String orderId,
-                                   String pgTransactionId,
-                                   String authCode) {
-        Payment p = new Payment();
-        p.merchantId = merchantId;
-        p.userId = userId;
-        p.accountId = accountId;
-        p.amount = amount;
-        p.orderId = orderId;
-        p.pgTransactionId = pgTransactionId;
-        p.authCode = authCode;
-        p.status = PaymentStatus.COMPLETED;
-
-        return p;
+    public void approve(PgApproveResponseDTO responseDTO) {
+        this.pgTransactionId = responseDTO.getPgTransactionId();
+        this.authCode = responseDTO.getAuthCode();
+        this.status = PaymentStatus.COMPLETED;
     }
 
     public void cancel() {
