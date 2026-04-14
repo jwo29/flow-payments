@@ -1,7 +1,10 @@
 package com.january.ledgerflow.payment.service;
 
 import com.january.ledgerflow.payment.domain.Payment;
-import com.january.ledgerflow.payment.dto.*;
+import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentApproveResponseDTO;
+import com.january.ledgerflow.payment.dto.PaymentRefundRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentRefundResponseDTO;
 import com.january.ledgerflow.payment.repository.PaymentRepository;
 import com.january.ledgerflow.pg.PgClient;
 import com.january.ledgerflow.pg.dto.PgApproveRequestDTO;
@@ -58,30 +61,8 @@ public class PaymentService {
         );
     }
 
-    public PaymentCancelResponseDTO cancel(PaymentCancelRequestDTO paymentCancelRequestDTO) {
-
-
-        Payment payment = paymentTransactionService.getCancelablePayment(paymentCancelRequestDTO.getPaymentId());
-
-        // 1. PG 요청 DTO로 변환
-        PgCancelRequestDTO pgCancelRequestDTO = new PgCancelRequestDTO(
-                payment.getPgTransactionId(),
-                payment.getAmount(),
-                paymentCancelRequestDTO.getReason()
-        );
-
-        // PG 호출
-        PgCancelResponseDTO pgCancelResponseDTO = pgClient.cancel(pgCancelRequestDTO);
-
-        paymentTransactionService.cancelPayment(payment.getPaymentId(), pgCancelResponseDTO);
-
-        return new PaymentCancelResponseDTO(
-                payment.getPaymentId(),
-                payment.getStatus().name(),
-                payment.getOrderId(),
-                payment.getAmount()
-        );
-
+    public PaymentRefundResponseDTO cancel(PaymentRefundRequestDTO paymentRefundRequestDTO) {
+        return refund(paymentRefundRequestDTO);
     }
 
     public PaymentRefundResponseDTO refund(PaymentRefundRequestDTO paymentRefundRequestDTO) {
