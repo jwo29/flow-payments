@@ -50,6 +50,7 @@ public class Payment {
         p.orderId = requestDTO.getOrderId();
         p.amount = requestDTO.getAmount();
         p.status = PaymentStatus.REQUESTED;
+        p.createdAt = LocalDateTime.now();
 
         return p;
     }
@@ -61,6 +62,7 @@ public class Payment {
         changeStatus(PaymentStatus.APPROVED);
         this.pgTransactionId = responseDTO.getPgTransactionId();
         this.authCode = responseDTO.getAuthCode();
+        this.approvedAt = LocalDateTime.now();
     }
 
     public void cancel() {
