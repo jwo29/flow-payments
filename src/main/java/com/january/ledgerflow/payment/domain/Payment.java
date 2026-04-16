@@ -58,38 +58,30 @@ public class Payment {
            Factory Method
        ========================== */
     public void approve(PgApproveResponseDTO responseDTO) {
+        changeStatus(PaymentStatus.APPROVED);
         this.pgTransactionId = responseDTO.getPgTransactionId();
         this.authCode = responseDTO.getAuthCode();
-        this.status = PaymentStatus.COMPLETED;
     }
 
     public void cancel() {
-        this.status = PaymentStatus.CANCELLED;
+        changeStatus(PaymentStatus.CANCELLED);
         this.canceledAt = LocalDateTime.now();
     }
 
     public void fail(String reason) {
-        this.status = PaymentStatus.FAILED;
+        changeStatus(PaymentStatus.FAILED);
         this.failureReason = reason;
     }
 
-    public boolean isRequested() {
-        return PaymentStatus.REQUESTED == this.status;
+    public void refund() {
+        changeStatus(PaymentStatus.REFUNDED);
     }
 
-    public boolean isApproved() {
-        return PaymentStatus.APPROVED == this.status;
+    public void changeStatus(PaymentStatus target) {
+        if (!this.status.canTransitionTo(target)) {
+            throw new IllegalStateException("Invalid status transition: " + this.status + " → " + target);
+        }
+        this.status = target;
     }
 
-    public boolean isCompleted() {
-        return PaymentStatus.COMPLETED == this.status;
-    }
-
-    public boolean isCanceled() {
-        return PaymentStatus.CANCELLED == this.status;
-    }
-
-    public boolean isFailed() {
-        return PaymentStatus.FAILED == this.status;
-    }
 }
