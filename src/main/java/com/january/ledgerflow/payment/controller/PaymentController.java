@@ -1,8 +1,10 @@
 package com.january.ledgerflow.payment.controller;
 
 import com.january.ledgerflow.common.response.ApiResponse;
-import com.january.ledgerflow.payment.domain.Payment;
-import com.january.ledgerflow.payment.dto.*;
+import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentApproveResponseDTO;
+import com.january.ledgerflow.payment.dto.PaymentRefundRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentRefundResponseDTO;
 import com.january.ledgerflow.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -29,9 +31,9 @@ public class PaymentController {
      * @param id
      */
     @PostMapping("/{id}/cancel")
-    public ApiResponse<PaymentCancelResponseDTO> cancelPayment(@PathVariable("id") Long id, @RequestBody PaymentCancelRequestDTO paymentCancelRequestDTO) {
-        PaymentCancelResponseDTO paymentCancelResponseDTO = paymentService.cancel(paymentCancelRequestDTO);
-        return ApiResponse.success(paymentCancelResponseDTO);
+    public ApiResponse<PaymentRefundResponseDTO> cancelPayment(@PathVariable("id") Long id, @RequestBody PaymentRefundRequestDTO paymentRefundRequestDTO) {
+        PaymentRefundResponseDTO paymentRefundResponseDTO = paymentService.cancel(paymentRefundRequestDTO);
+        return ApiResponse.success(paymentRefundResponseDTO);
     }
 
     /**
