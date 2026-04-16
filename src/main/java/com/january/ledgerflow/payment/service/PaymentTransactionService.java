@@ -4,6 +4,7 @@ import com.january.ledgerflow.payment.domain.Payment;
 import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
 import com.january.ledgerflow.payment.exception.PaymentException;
 import com.january.ledgerflow.payment.repository.PaymentRepository;
+import com.january.ledgerflow.payment.vo.PaymentStatus;
 import com.january.ledgerflow.pg.dto.PgApproveResponseDTO;
 import com.january.ledgerflow.pg.dto.PgCancelResponseDTO;
 import com.january.ledgerflow.transaction.dto.DepositRequestDTO;
@@ -52,7 +53,7 @@ public class PaymentTransactionService {
     public Payment getCancelablePayment(Long paymentId) {
         Payment payment = paymentRepository.findByPaymentId(paymentId);
 
-        if (!payment.isApproved()) {
+        if (!payment.getStatus().canTransitionTo(PaymentStatus.CANCELLED)) {
             throw new IllegalStateException("취소 불가 상태");
         }
 
