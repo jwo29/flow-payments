@@ -21,7 +21,11 @@ public class PaymentTransactionService {
     private final PaymentRepository paymentRepository;
     private final TransactionService transactionService;
 
-    @Transactional
+    public Payment getOrCreatePayment(PaymentApproveRequestDTO paymentApproveRequestDTO) {
+        return paymentRepository.findByOrderId(paymentApproveRequestDTO.getOrderId())
+                .orElseGet(() -> createPayment(paymentApproveRequestDTO));
+    }
+
     public Payment createPayment(PaymentApproveRequestDTO paymentApproveRequestDTO) {
         Payment payment = Payment.request(paymentApproveRequestDTO);
         return paymentRepository.save(payment);
