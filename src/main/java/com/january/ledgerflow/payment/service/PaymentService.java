@@ -33,10 +33,19 @@ public class PaymentService {
 
     public PaymentApproveResponseDTO approve(PaymentApproveRequestDTO paymentApproveRequestDTO) {
 
+        // 1. idempotency 체크
         Payment payment = paymentTransactionService.getOrCreatePayment(paymentApproveRequestDTO);
 
-        if (!(payment.getStatus() == PaymentStatus.APPROVED)) {
-            // 1. PG 요청 DTO로 변환
+        // 이미 완료된 결제면 그대로 반환
+        if (payment.getStatus() == PaymentStatus.APPROVED) {
+            return toResponse(payment);
+        }
+
+        // 2. PENDING 상태로 전이
+        payment.markPending();
+
+        try {
+            // 3. PG 요청
             PgApproveRequestDTO pgApproveRequestDTO = new PgApproveRequestDTO(
                     paymentApproveRequestDTO.getMerchantId(),
                     paymentApproveRequestDTO.getOrderId(),
@@ -44,14 +53,24 @@ public class PaymentService {
                     paymentApproveRequestDTO.getCardNumber(),
                     paymentApproveRequestDTO.getInstallment()
             );
-
-            // 2. PG 호출
             PgApproveResponseDTO pgApproveResponseDTO = pgClient.approve(pgApproveRequestDTO);
 
-            // 3. 결과 반영
+            // 4. 결과 반영
             paymentTransactionService.completePayment(payment.getPaymentId(), pgApproveResponseDTO);
+        } catch (Exception e) {
+            // 예외 발생 시, 실패 확정하지 않고, PENDING 유지
+            return new PaymentApproveResponseDTO(
+                    payment.getPaymentId(),
+                    PaymentStatus.PENDING.name(),
+                    payment.getOrderId(),
+                    payment.getAmount()
+            );
         }
 
+        return toResponse(payment);
+    }
+
+    private PaymentApproveResponseDTO toResponse(Payment payment) {
         return new PaymentApproveResponseDTO(
                 payment.getPaymentId(),
                 payment.getStatus().name(),

@@ -55,6 +55,10 @@ public class Payment {
         return p;
     }
 
+    public void markPending() {
+        changeStatus(PaymentStatus.PENDING);
+    }
+
     /* ==========================
            Factory Method
        ========================== */
