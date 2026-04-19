@@ -1,10 +1,8 @@
 package com.january.ledgerflow.payment.service;
 
 import com.january.ledgerflow.payment.domain.Payment;
-import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
-import com.january.ledgerflow.payment.dto.PaymentApproveResponseDTO;
-import com.january.ledgerflow.payment.dto.PaymentRefundRequestDTO;
-import com.january.ledgerflow.payment.dto.PaymentRefundResponseDTO;
+import com.january.ledgerflow.payment.dto.*;
+import com.january.ledgerflow.payment.repository.PaymentRepository;
 import com.january.ledgerflow.payment.vo.PaymentStatus;
 import com.january.ledgerflow.pg.PgClient;
 import com.january.ledgerflow.pg.dto.PgApproveRequestDTO;
@@ -30,6 +28,7 @@ public class PaymentService {
     private final PgClient pgClient;
 
     private final PaymentTransactionService paymentTransactionService;
+    private final PaymentRepository paymentRepository;
 
     public PaymentApproveResponseDTO approve(PaymentApproveRequestDTO paymentApproveRequestDTO) {
 
@@ -106,5 +105,29 @@ public class PaymentService {
                 payment.getAmount()
         );
     }
+
+    public PaymentApproveResponseDTO retry (Long paymentId, PaymentRetryRequestDTO paymentRetryRequestDTO) {
+
+        Payment payment = paymentRepository.findByPaymentId(paymentId);
+
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            throw new IllegalStateException("재시도 불가 상태");
+        }
+
+        return approve((toRequest(payment, paymentRetryRequestDTO)));
+    }
+
+    private PaymentApproveRequestDTO toRequest(Payment payment, PaymentRetryRequestDTO paymentRetryRequestDTO) {
+        return new PaymentApproveRequestDTO(
+                payment.getMerchantId(),
+                payment.getUserId(),
+                payment.getAccountId(),
+                payment.getAmount(),
+                payment.getOrderId(),
+                paymentRetryRequestDTO.getCardNumber(),
+                paymentRetryRequestDTO.getInstallment()
+        );
+    }
+
 
 }

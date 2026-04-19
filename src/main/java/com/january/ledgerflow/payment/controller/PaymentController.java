@@ -1,11 +1,9 @@
 package com.january.ledgerflow.payment.controller;
 
 import com.january.ledgerflow.common.response.ApiResponse;
-import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
-import com.january.ledgerflow.payment.dto.PaymentApproveResponseDTO;
-import com.january.ledgerflow.payment.dto.PaymentRefundRequestDTO;
-import com.january.ledgerflow.payment.dto.PaymentRefundResponseDTO;
+import com.january.ledgerflow.payment.dto.*;
 import com.january.ledgerflow.payment.service.PaymentService;
+import com.january.ledgerflow.payment.service.PaymentTransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final PaymentTransactionService paymentTransactionService;
 
     /**
      * 결제 생성 + 승인 + 매입 자동 처리
@@ -44,6 +43,12 @@ public class PaymentController {
     public ApiResponse<PaymentRefundResponseDTO> refundPayment(@PathVariable("id") Long id, @RequestBody PaymentRefundRequestDTO paymentRefundRequestDTO) {
         PaymentRefundResponseDTO paymentRefundResponseDTO = paymentService.refund(paymentRefundRequestDTO);
         return ApiResponse.success(paymentRefundResponseDTO);
+    }
+
+    @PostMapping("/{id}/retry")
+    public ApiResponse<PaymentApproveResponseDTO> retryPayment(@PathVariable("id") Long paymentId,
+                                          @RequestBody PaymentRetryRequestDTO paymentRetryRequestDTO) {
+        return ApiResponse.success(paymentService.retry(paymentId, paymentRetryRequestDTO));
     }
 
 }
