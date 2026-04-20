@@ -4,15 +4,14 @@ import com.january.ledgerflow.payment.domain.Payment;
 import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
 import com.january.ledgerflow.payment.exception.PaymentException;
 import com.january.ledgerflow.payment.repository.PaymentRepository;
-import com.january.ledgerflow.payment.vo.PaymentStatus;
 import com.january.ledgerflow.pg.dto.PgApproveResponseDTO;
-import com.january.ledgerflow.pg.dto.PgCancelResponseDTO;
-import com.january.ledgerflow.transaction.dto.DepositRequestDTO;
 import com.january.ledgerflow.transaction.dto.WithdrawRequestDTO;
 import com.january.ledgerflow.transaction.service.TransactionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -23,12 +22,16 @@ public class PaymentTransactionService {
 
     public Payment getOrCreatePayment(PaymentApproveRequestDTO paymentApproveRequestDTO) {
         return paymentRepository.findByOrderId(paymentApproveRequestDTO.getOrderId())
-                .orElseGet(() -> createPayment(paymentApproveRequestDTO));
-    }
-
-    public Payment createPayment(PaymentApproveRequestDTO paymentApproveRequestDTO) {
-        Payment payment = Payment.request(paymentApproveRequestDTO);
-        return paymentRepository.save(payment);
+                .orElseGet(() -> paymentRepository.save(
+                        new Payment(
+                                paymentApproveRequestDTO.getMerchantId(),
+                                paymentApproveRequestDTO.getUserId(),
+                                paymentApproveRequestDTO.getAccountId(),
+                                paymentApproveRequestDTO.getOrderId(),
+                                paymentApproveRequestDTO.getAmount(),
+                                paymentApproveRequestDTO.getPaymentMethod()
+                        )
+                ));
     }
 
     @Transactional
@@ -41,7 +44,7 @@ public class PaymentTransactionService {
             throw new PaymentException("PG 승인 실패: " + pgApproveResponseDTO.getMessage());
         }
 
-        payment.approve(pgApproveResponseDTO);
+        payment.approve(pgApproveResponseDTO.getPgTransactionId(), pgApproveResponseDTO.getAuthCode());
 
         // 5. 계좌 잔액 차감
         transactionService.withdraw(
@@ -54,36 +57,18 @@ public class PaymentTransactionService {
     }
 
     @Transactional
-    public Payment getCancelablePayment(Long paymentId) {
+    public Payment getRefundablePayment(Long paymentId, BigDecimal amount) {
         Payment payment = paymentRepository.findByPaymentId(paymentId);
 
-        if (!payment.getStatus().canTransitionTo(PaymentStatus.CANCELLED)) {
-            throw new IllegalStateException("취소 불가 상태");
+        if (!payment.getStatus().canRefund()) {
+            throw new IllegalStateException("환불 불가 상태");
+        }
+
+        if (payment.getRemainingAmount().compareTo(amount) < 0) {
+            throw new IllegalArgumentException("환불 금액 초과");
         }
 
         return payment;
-    }
-
-    @Transactional
-    public void cancelPayment(Long paymendId, PgCancelResponseDTO pgCancelResponseDTO) {
-        Payment payment = paymentRepository.findByPaymentId(paymendId);
-
-        if (!"CANCELED".equals(pgCancelResponseDTO.getStatus())) {
-            payment.fail(pgCancelResponseDTO.getMessage());
-
-            throw new PaymentException("PG 취소 실패: " + pgCancelResponseDTO.getMessage());
-        }
-
-        // 3. Payment 생성 (상태: CANCELLED)
-        payment.cancel();
-
-        // 5. 계좌 잔액 차감
-        transactionService.deposit(
-                new DepositRequestDTO(
-                        payment.getAccountId(),
-                        payment.getAmount()
-                )
-        );
     }
 
 }

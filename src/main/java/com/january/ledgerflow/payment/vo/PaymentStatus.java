@@ -6,8 +6,7 @@ public enum PaymentStatus {
     REQUESTED,
     PENDING,
     APPROVED,
-    COMPLETED,
-    CANCELLED,
+    PARTIALLY_REFUNDED,
     REFUNDED,
     FAILED;
 
@@ -16,9 +15,13 @@ public enum PaymentStatus {
         return switch (this) {
             case REQUESTED -> Set.of(PENDING, FAILED).contains(target);
             case PENDING -> Set.of(APPROVED, FAILED).contains(target);
-            case APPROVED -> CANCELLED == target;
-            case COMPLETED -> REFUNDED == target;
-            case FAILED, CANCELLED, REFUNDED -> false;
+            case APPROVED -> Set.of(PARTIALLY_REFUNDED, REFUNDED).contains(target);
+            case PARTIALLY_REFUNDED -> Set.of(PARTIALLY_REFUNDED, REFUNDED).contains(target);
+            default -> false;
         };
+    }
+
+    public boolean canRefund() {
+        return this == APPROVED || this == PARTIALLY_REFUNDED;
     }
 }

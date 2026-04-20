@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PaymentRefundRequestDTO {
     private Long paymentId;
-    private String pgTransactionId;
     private BigDecimal amount;
     private String reason;
 }
