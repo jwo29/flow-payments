@@ -3,7 +3,6 @@ package com.january.ledgerflow.payment.service;
 import com.january.ledgerflow.payment.domain.Payment;
 import com.january.ledgerflow.payment.dto.*;
 import com.january.ledgerflow.payment.repository.PaymentRepository;
-import com.january.ledgerflow.payment.vo.PaymentMethod;
 import com.january.ledgerflow.payment.vo.PaymentStatus;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -80,20 +79,6 @@ public class PaymentService {
         PaymentProcessor processor = factory.get(payment.getPaymentMethod());
 
         return processor.processRetry(payment, paymentRetryRequestDTO);
-    }
-
-    private PaymentApproveRequestDTO toRequest(Payment payment, PaymentRetryRequestDTO paymentRetryRequestDTO) {
-        return new PaymentApproveRequestDTO(
-                payment.getMerchantId(),
-                payment.getUserId(),
-                payment.getAccountId(),
-                null,
-                payment.getAmount(),
-                payment.getOrderId(),
-                paymentRetryRequestDTO.getCardNumber(),
-                paymentRetryRequestDTO.getInstallment(),
-                PaymentMethod.CARD
-        );
     }
 
 }
