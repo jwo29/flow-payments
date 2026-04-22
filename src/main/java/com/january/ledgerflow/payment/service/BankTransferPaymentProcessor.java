@@ -48,14 +48,14 @@ public class BankTransferPaymentProcessor implements PaymentProcessor {
     public PaymentRefundResponseDTO refund(Payment payment, PaymentRefundRequestDTO request) {
         transactionService.transfer(
                 new TransferRequestDTO(
-                        request.getMerchantAccountId(),
-                        request.getAccountId(),
+                        payment.getMerchantAccountId(),
+                        payment.getAccountId(),
                         payment.getAmount()
                 )
         );
 
         // 2. 즉시 승인
-        payment.cancelWithoutPg();
+        payment.refund(request.getAmount());
 
         return new PaymentRefundResponseDTO(
                 payment.getPaymentId(),

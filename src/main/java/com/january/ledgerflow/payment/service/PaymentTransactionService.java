@@ -5,6 +5,8 @@ import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
 import com.january.ledgerflow.payment.exception.PaymentException;
 import com.january.ledgerflow.payment.repository.PaymentRepository;
 import com.january.ledgerflow.pg.dto.PgApproveResponseDTO;
+import com.january.ledgerflow.pg.dto.PgCancelResponseDTO;
+import com.january.ledgerflow.transaction.dto.DepositRequestDTO;
 import com.january.ledgerflow.transaction.dto.WithdrawRequestDTO;
 import com.january.ledgerflow.transaction.service.TransactionService;
 import jakarta.transaction.Transactional;
@@ -69,6 +71,44 @@ public class PaymentTransactionService {
         }
 
         return payment;
+    }
+
+    @Transactional
+    public void refundPayment(
+            Long paymentId,
+            BigDecimal refundAmount,
+            PgCancelResponseDTO pgResponse
+    ) {
+
+        Payment payment = paymentRepository.findByPaymentId(paymentId);
+
+        // 1. PG 결과 검증
+        if (!"CANCELLED".equals(pgResponse.getStatus())) {
+            payment.fail(pgResponse.getMessage());
+            throw new PaymentException("PG 환불 실패: " + pgResponse.getMessage());
+        }
+
+        // 2. 금액 검증 (방어 로직)
+        if (payment.getRemainingAmount().compareTo(refundAmount) < 0) {
+            throw new IllegalArgumentException("환불 금액 초과");
+        }
+
+        try {
+            // 3. 계좌 복구 (핵심)
+            transactionService.deposit(
+                    new DepositRequestDTO(
+                            payment.getAccountId(),
+                            refundAmount
+                    )
+            );
+
+            // 4. Payment 상태 및 금액 반영
+            payment.refund(refundAmount);
+
+        } catch (Exception e) {
+            // 계좌 복구 실패 시 롤백
+            throw e;
+        }
     }
 
 }

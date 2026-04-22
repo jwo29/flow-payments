@@ -70,7 +70,7 @@ public class CardPaymentProcessor implements PaymentProcessor {
         // PG 호출
         PgCancelResponseDTO pgCancelResponseDTO = pgClient.cancel(pgCancelRequestDTO);
 
-        paymentTransactionService.cancelPayment(payment.getPaymentId(), pgCancelResponseDTO);
+        paymentTransactionService.refundPayment(payment.getPaymentId(), request.getAmount(), pgCancelResponseDTO);
 
         return new PaymentRefundResponseDTO(
                 payment.getPaymentId(),
