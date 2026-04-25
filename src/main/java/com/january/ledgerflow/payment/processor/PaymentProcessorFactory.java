@@ -1,6 +1,6 @@
-package com.january.ledgerflow.payment.service;
+package com.january.ledgerflow.payment.processor;
 
-import com.january.ledgerflow.payment.vo.PaymentMethod;
+import com.january.ledgerflow.payment.domain.PaymentMethod;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

@@ -1,11 +1,16 @@
 package com.january.ledgerflow.payment.service;
 
 import com.january.ledgerflow.payment.domain.Payment;
+import com.january.ledgerflow.payment.domain.PaymentStatus;
+import com.january.ledgerflow.payment.domain.PaymentTransaction;
 import com.january.ledgerflow.payment.dto.*;
+import com.january.ledgerflow.payment.processor.PaymentProcessor;
+import com.january.ledgerflow.payment.processor.PaymentProcessorFactory;
 import com.january.ledgerflow.payment.repository.PaymentRepository;
-import com.january.ledgerflow.payment.vo.PaymentStatus;
+import com.january.ledgerflow.payment.repository.PaymentTransactionRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -23,13 +28,15 @@ public class PaymentService {
 
     private final PaymentTransactionService paymentTransactionService;
     private final PaymentRepository paymentRepository;
+    private final PaymentTransactionRepository txRepository;
     private final PaymentProcessorFactory factory;
 
     @Transactional
-    public PaymentApproveResponseDTO approve(PaymentApproveRequestDTO paymentApproveRequestDTO) {
+    public PaymentResponseDTO approve(PaymentApproveRequestDTO paymentApproveRequestDTO) {
 
         // 1. idempotency 체크
-        Payment payment = paymentTransactionService.getOrCreatePayment(paymentApproveRequestDTO);
+        Payment payment = paymentRepository.findByOrderId(paymentApproveRequestDTO.getOrderId())
+                .orElseGet(() -> createPayment(paymentApproveRequestDTO));
 
         // 이미 완료된 결제면 그대로 반환
         if (payment.getStatus() == PaymentStatus.APPROVED) {
@@ -40,12 +47,37 @@ public class PaymentService {
         PaymentProcessor processor = factory.get(payment.getPaymentMethod());
 
         // 3. 위임
-        return processor.process(payment, paymentApproveRequestDTO);
+        PaymentProcessResult paymentProcessResult = processor.process(payment, paymentApproveRequestDTO);
 
+        payment.approve(paymentProcessResult.getPgTransactionId(), paymentProcessResult.getAuthCode());
+        payment.capture(); // 즉시결제 모델
+
+        txRepository.save(PaymentTransaction.builder()
+                .paymentId(payment.getPaymentId())
+                .type("APPROVE")
+                .amount(payment.getAmount())
+                .status("SUCCESS")
+                .pgResponse(paymentProcessResult.getRawResponse())
+                .build());
+
+        return toResponse(payment);
     }
 
-    private PaymentApproveResponseDTO toResponse(Payment payment) {
-        return new PaymentApproveResponseDTO(
+    private Payment createPayment(PaymentApproveRequestDTO paymentApproveRequestDTO) {
+        try {
+            Payment payment = new Payment(
+            );
+
+            return paymentRepository.save(payment);
+        } catch (DataIntegrityViolationException e) {
+            // 동시에 다른 요청이 먼저 insert한 경우
+            return paymentRepository.findByOrderId(paymentApproveRequestDTO.getOrderId())
+                    .orElseThrow();
+        }
+    }
+
+    private PaymentResponseDTO toResponse(Payment payment) {
+        return new PaymentResponseDTO(
                 payment.getPaymentId(),
                 payment.getStatus().name(),
                 payment.getOrderId(),
@@ -53,22 +85,35 @@ public class PaymentService {
         );
     }
 
-    public PaymentRefundResponseDTO refund(PaymentRefundRequestDTO paymentRefundRequestDTO) {
+    public PaymentResponseDTO refund(PaymentRefundRequestDTO paymentRefundRequestDTO) {
 
         Payment payment = paymentTransactionService.getRefundablePayment(paymentRefundRequestDTO.getPaymentId(), paymentRefundRequestDTO.getAmount());
 
-        // 2. 전략 선택
+        // 전략 선택
         PaymentProcessor processor = factory.get(payment.getPaymentMethod());
 
-        return processor.refund(payment, paymentRefundRequestDTO);
+        PaymentProcessResult paymentProcessResult = processor.refund(payment, paymentRefundRequestDTO);
+
+        // Payment 상태 및 금액 반영
+        payment.refund(paymentRefundRequestDTO.getAmount());
+
+        txRepository.save(PaymentTransaction.builder()
+                .paymentId(payment.getPaymentId())
+                .type("REFUND")
+                .amount(payment.getAmount())
+                .status("SUCCESS")
+                .pgResponse(paymentProcessResult.getRawResponse())
+                .build());
+
+        return toResponse(payment);
     }
 
-    public PaymentRefundResponseDTO cancel(PaymentRefundRequestDTO paymentRefundRequestDTO) {
+    public PaymentResponseDTO cancel(PaymentRefundRequestDTO paymentRefundRequestDTO) {
         return refund(paymentRefundRequestDTO);
     }
 
     @Transactional
-    public PaymentApproveResponseDTO retry (Long paymentId, PaymentRetryRequestDTO paymentRetryRequestDTO) {
+    public PaymentResponseDTO retry (Long paymentId, PaymentRetryRequestDTO paymentRetryRequestDTO) {
 
         Payment payment = paymentRepository.findByPaymentId(paymentId);
 
@@ -78,7 +123,20 @@ public class PaymentService {
 
         PaymentProcessor processor = factory.get(payment.getPaymentMethod());
 
-        return processor.processRetry(payment, paymentRetryRequestDTO);
+        PaymentProcessResult paymentProcessResult = processor.processRetry(payment, paymentRetryRequestDTO);
+
+        payment.approve();
+        payment.capture();
+
+        txRepository.save(PaymentTransaction.builder()
+                .paymentId(payment.getPaymentId())
+                .type("REFUND")
+                .amount(payment.getAmount())
+                .status("SUCCESS")
+                .pgResponse(paymentProcessResult.getRawResponse())
+                .build());
+
+        return toResponse(payment);
     }
 
 }

@@ -1,6 +1,6 @@
 package com.january.ledgerflow.payment.dto;
 
-import com.january.ledgerflow.payment.vo.PaymentMethod;
+import com.january.ledgerflow.payment.domain.PaymentMethod;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

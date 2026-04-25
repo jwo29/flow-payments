@@ -1,7 +1,10 @@
 package com.january.ledgerflow.payment.controller;
 
 import com.january.ledgerflow.common.response.ApiResponse;
-import com.january.ledgerflow.payment.dto.*;
+import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentRefundRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentResponseDTO;
+import com.january.ledgerflow.payment.dto.PaymentRetryRequestDTO;
 import com.january.ledgerflow.payment.service.PaymentService;
 import com.january.ledgerflow.payment.service.PaymentTransactionService;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +23,9 @@ public class PaymentController {
      * @return
      */
     @PostMapping("")
-    public ApiResponse<PaymentApproveResponseDTO> createPayment(@RequestBody PaymentApproveRequestDTO paymentApproveRequestDTO) {
-        PaymentApproveResponseDTO paymentApproveResponseDTO = paymentService.approve(paymentApproveRequestDTO);
-        return ApiResponse.success(paymentApproveResponseDTO);
+    public ApiResponse<PaymentResponseDTO> createPayment(@RequestBody PaymentApproveRequestDTO paymentApproveRequestDTO) {
+        PaymentResponseDTO paymentResponseDTO = paymentService.approve(paymentApproveRequestDTO);
+        return ApiResponse.success(paymentResponseDTO);
     }
 
     /**
@@ -30,9 +33,9 @@ public class PaymentController {
      * @param id
      */
     @PostMapping("/{id}/cancel")
-    public ApiResponse<PaymentRefundResponseDTO> cancelPayment(@PathVariable("id") Long id, @RequestBody PaymentRefundRequestDTO paymentRefundRequestDTO) {
-        PaymentRefundResponseDTO paymentRefundResponseDTO = paymentService.cancel(paymentRefundRequestDTO);
-        return ApiResponse.success(paymentRefundResponseDTO);
+    public ApiResponse<PaymentResponseDTO> cancelPayment(@PathVariable("id") Long id, @RequestBody PaymentRefundRequestDTO paymentRefundRequestDTO) {
+        PaymentResponseDTO paymentResponseDTO = paymentService.cancel(paymentRefundRequestDTO);
+        return ApiResponse.success(paymentResponseDTO);
     }
 
     /**
@@ -40,14 +43,14 @@ public class PaymentController {
      * @param id
      */
     @PostMapping("/{id}/refund")
-    public ApiResponse<PaymentRefundResponseDTO> refundPayment(@PathVariable("id") Long id, @RequestBody PaymentRefundRequestDTO paymentRefundRequestDTO) {
-        PaymentRefundResponseDTO paymentRefundResponseDTO = paymentService.refund(paymentRefundRequestDTO);
-        return ApiResponse.success(paymentRefundResponseDTO);
+    public ApiResponse<PaymentResponseDTO> refundPayment(@PathVariable("id") Long id, @RequestBody PaymentRefundRequestDTO paymentRefundRequestDTO) {
+        PaymentResponseDTO paymentResponseDTO = paymentService.refund(paymentRefundRequestDTO);
+        return ApiResponse.success(paymentResponseDTO);
     }
 
     @PostMapping("/{id}/retry")
-    public ApiResponse<PaymentApproveResponseDTO> retryPayment(@PathVariable("id") Long paymentId,
-                                          @RequestBody PaymentRetryRequestDTO paymentRetryRequestDTO) {
+    public ApiResponse<PaymentResponseDTO> retryPayment(@PathVariable("id") Long paymentId,
+                                                        @RequestBody PaymentRetryRequestDTO paymentRetryRequestDTO) {
         return ApiResponse.success(paymentService.retry(paymentId, paymentRetryRequestDTO));
     }
 

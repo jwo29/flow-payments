@@ -1,8 +1,12 @@
-package com.january.ledgerflow.payment.service;
+package com.january.ledgerflow.payment.processor;
 
 import com.january.ledgerflow.payment.domain.Payment;
-import com.january.ledgerflow.payment.dto.*;
-import com.january.ledgerflow.payment.vo.PaymentMethod;
+import com.january.ledgerflow.payment.domain.PaymentMethod;
+import com.january.ledgerflow.payment.domain.PaymentStatus;
+import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentProcessResult;
+import com.january.ledgerflow.payment.dto.PaymentRefundRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentRetryRequestDTO;
 import com.january.ledgerflow.transaction.dto.TransferRequestDTO;
 import com.january.ledgerflow.transaction.service.TransactionService;
 import jakarta.transaction.Transactional;
@@ -22,7 +26,7 @@ public class BankTransferPaymentProcessor implements PaymentProcessor {
 
     @Override
     @Transactional
-    public PaymentApproveResponseDTO process(Payment payment, PaymentApproveRequestDTO request) {
+    public PaymentProcessResult process(Payment payment, PaymentApproveRequestDTO request) {
         // 1. 즉시 이체
         transactionService.transfer(
                 new TransferRequestDTO(
@@ -33,19 +37,14 @@ public class BankTransferPaymentProcessor implements PaymentProcessor {
         );
 
         // 2. 즉시 승인
-        payment.approveWithoutPg();
+        payment.capture();
 
-        return new PaymentApproveResponseDTO(
-                payment.getPaymentId(),
-                payment.getStatus().name(),
-                payment.getOrderId(),
-                payment.getAmount()
-        );
+        return new PaymentProcessResult(PaymentStatus.CAPTURED);
     }
 
     @Override
     @Transactional
-    public PaymentRefundResponseDTO refund(Payment payment, PaymentRefundRequestDTO request) {
+    public PaymentProcessResult refund(Payment payment, PaymentRefundRequestDTO request) {
         transactionService.transfer(
                 new TransferRequestDTO(
                         payment.getMerchantAccountId(),
@@ -57,16 +56,11 @@ public class BankTransferPaymentProcessor implements PaymentProcessor {
         // 2. 즉시 승인
         payment.refund(request.getAmount());
 
-        return new PaymentRefundResponseDTO(
-                payment.getPaymentId(),
-                payment.getStatus().name(),
-                payment.getOrderId(),
-                payment.getAmount()
-        );
+        return new PaymentProcessResult(PaymentStatus.REFUNDED);
     }
 
     @Override
-    public PaymentApproveResponseDTO processRetry(Payment payment, PaymentRetryRequestDTO request) {
+    public PaymentProcessResult processRetry(Payment payment, PaymentRetryRequestDTO request) {
         // 1. 즉시 이체
         transactionService.transfer(
                 new TransferRequestDTO(
@@ -77,13 +71,8 @@ public class BankTransferPaymentProcessor implements PaymentProcessor {
         );
 
         // 2. 즉시 승인
-        payment.approveWithoutPg();
+        payment.capture();
 
-        return new PaymentApproveResponseDTO(
-                payment.getPaymentId(),
-                payment.getStatus().name(),
-                payment.getOrderId(),
-                payment.getAmount()
-        );
+        return new PaymentProcessResult(PaymentStatus.CAPTURED);
     }
 }

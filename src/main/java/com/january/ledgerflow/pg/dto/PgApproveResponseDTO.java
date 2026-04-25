@@ -1,8 +1,10 @@
 package com.january.ledgerflow.pg.dto;
 
 import lombok.Getter;
+import lombok.ToString;
 
 @Getter
+@ToString
 public class PgApproveResponseDTO {
     private String pgTransactionId;
     private String orderId;

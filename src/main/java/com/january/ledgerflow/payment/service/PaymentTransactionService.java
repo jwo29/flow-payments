@@ -1,7 +1,6 @@
 package com.january.ledgerflow.payment.service;
 
 import com.january.ledgerflow.payment.domain.Payment;
-import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
 import com.january.ledgerflow.payment.exception.PaymentException;
 import com.january.ledgerflow.payment.repository.PaymentRepository;
 import com.january.ledgerflow.pg.dto.PgApproveResponseDTO;
@@ -22,20 +21,6 @@ public class PaymentTransactionService {
     private final PaymentRepository paymentRepository;
     private final TransactionService transactionService;
 
-    public Payment getOrCreatePayment(PaymentApproveRequestDTO paymentApproveRequestDTO) {
-        return paymentRepository.findByOrderId(paymentApproveRequestDTO.getOrderId())
-                .orElseGet(() -> paymentRepository.save(
-                        new Payment(
-                                paymentApproveRequestDTO.getMerchantId(),
-                                paymentApproveRequestDTO.getUserId(),
-                                paymentApproveRequestDTO.getAccountId(),
-                                paymentApproveRequestDTO.getOrderId(),
-                                paymentApproveRequestDTO.getAmount(),
-                                paymentApproveRequestDTO.getPaymentMethod()
-                        )
-                ));
-    }
-
     @Transactional
     public void completePayment(Long paymentId, PgApproveResponseDTO pgApproveResponseDTO) {
         Payment payment = paymentRepository.findByPaymentId(paymentId);
@@ -45,8 +30,6 @@ public class PaymentTransactionService {
 
             throw new PaymentException("PG 승인 실패: " + pgApproveResponseDTO.getMessage());
         }
-
-        payment.approve(pgApproveResponseDTO.getPgTransactionId(), pgApproveResponseDTO.getAuthCode());
 
         // 5. 계좌 잔액 차감
         transactionService.withdraw(
@@ -62,7 +45,7 @@ public class PaymentTransactionService {
     public Payment getRefundablePayment(Long paymentId, BigDecimal amount) {
         Payment payment = paymentRepository.findByPaymentId(paymentId);
 
-        if (!payment.getStatus().canRefund()) {
+        if (!payment.canRefund()) {
             throw new IllegalStateException("환불 불가 상태");
         }
 
@@ -101,9 +84,6 @@ public class PaymentTransactionService {
                             refundAmount
                     )
             );
-
-            // 4. Payment 상태 및 금액 반영
-            payment.refund(refundAmount);
 
         } catch (Exception e) {
             // 계좌 복구 실패 시 롤백

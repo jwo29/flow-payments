@@ -1,7 +1,5 @@
 package com.january.ledgerflow.payment.domain;
 
-import com.january.ledgerflow.payment.vo.PaymentMethod;
-import com.january.ledgerflow.payment.vo.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -48,23 +46,64 @@ public class Payment {
     }
 
     public void markPending() {
-        changeStatus(PaymentStatus.PENDING);
+        this.status = PaymentStatus.PENDING;
     }
 
+    public boolean canApprove() {
+        return this.status == PaymentStatus.REQUESTED;
+    }
+
+    public boolean canCapture() {
+        return this.status == PaymentStatus.APPROVED;
+    }
+
+    public boolean canCancel() {
+        return this.status == PaymentStatus.APPROVED;
+    }
+
+    public boolean canRefund() {
+        return this.status == PaymentStatus.CAPTURED;
+    }
+
+
     public void approve(String pgTxId, String authCode) {
-        changeStatus(PaymentStatus.APPROVED);
+        if (!canApprove()) {
+            throw new IllegalStateException();
+        }
+        this.status = PaymentStatus.APPROVED;
         this.pgTransactionId = pgTxId;
         this.authCode = authCode;
         this.approvedAt = LocalDateTime.now();
     }
 
-    public void approveWithoutPg() {
-        changeStatus(PaymentStatus.APPROVED);
-        this.approvedAt = LocalDateTime.now();
+    public void approve() {
+        approve(null, null);
+    }
+
+    public void capture() {
+        if (!canCapture()) {
+            throw new IllegalStateException();
+        }
+        this.status = PaymentStatus.CAPTURED;
+    }
+
+    public void cancel() {
+        if (!canCancel()) {
+            throw new IllegalStateException();
+        }
+        this.status = PaymentStatus.CANCELED;
+        this.canceledAt = LocalDateTime.now();
+    }
+
+    public void refund() {
+        if (!canRefund()) {
+            throw new IllegalStateException();
+        }
+        this.status = PaymentStatus.REFUNDED;
     }
 
     public void fail(String reason) {
-        changeStatus(PaymentStatus.FAILED);
+        this.status = PaymentStatus.FAILED;
         this.failureReason = reason;
     }
 
@@ -72,9 +111,9 @@ public class Payment {
         this.refundedAmount = this.refundedAmount.add(amount);
 
         if (getRemainingAmount().compareTo(BigDecimal.ZERO) == 0) {
-            changeStatus(PaymentStatus.REFUNDED);
+            this.status = PaymentStatus.REFUNDED;
         } else {
-            changeStatus(PaymentStatus.PARTIALLY_REFUNDED);
+            this.status = PaymentStatus.PARTIALLY_REFUNDED;
         }
     }
 
@@ -82,12 +121,6 @@ public class Payment {
         return amount.subtract(refundedAmount);
     }
 
-    private void changeStatus(PaymentStatus target) {
-        if (!this.status.canTransitionTo(target)) {
-            throw new IllegalStateException("Invalid status transition: " + this.status + " → " + target);
-        }
-        this.status = target;
-    }
 
 
 }

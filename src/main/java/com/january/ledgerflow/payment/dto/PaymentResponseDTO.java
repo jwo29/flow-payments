@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 
 @Getter
 @AllArgsConstructor
-public class PaymentApproveResponseDTO {
+public class PaymentResponseDTO {
     private Long paymentId;
     private String paymentStatus;
     private String orderId;

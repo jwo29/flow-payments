@@ -1,9 +1,13 @@
-package com.january.ledgerflow.payment.service;
+package com.january.ledgerflow.payment.processor;
 
 import com.january.ledgerflow.payment.domain.Payment;
-import com.january.ledgerflow.payment.dto.*;
-import com.january.ledgerflow.payment.vo.PaymentMethod;
-import com.january.ledgerflow.payment.vo.PaymentStatus;
+import com.january.ledgerflow.payment.domain.PaymentMethod;
+import com.january.ledgerflow.payment.domain.PaymentStatus;
+import com.january.ledgerflow.payment.dto.PaymentApproveRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentProcessResult;
+import com.january.ledgerflow.payment.dto.PaymentRefundRequestDTO;
+import com.january.ledgerflow.payment.dto.PaymentRetryRequestDTO;
+import com.january.ledgerflow.payment.service.PaymentTransactionService;
 import com.january.ledgerflow.pg.PgClient;
 import com.january.ledgerflow.pg.dto.PgApproveRequestDTO;
 import com.january.ledgerflow.pg.dto.PgApproveResponseDTO;
@@ -27,7 +31,7 @@ public class CardPaymentProcessor implements PaymentProcessor {
 
     @Override
     @Transactional
-    public PaymentApproveResponseDTO process(Payment payment, PaymentApproveRequestDTO request) {
+    public PaymentProcessResult process(Payment payment, PaymentApproveRequestDTO request) {
 
         // 1. PENDING
         payment.markPending();
@@ -45,21 +49,23 @@ public class CardPaymentProcessor implements PaymentProcessor {
 
             // 4. 결과 반영
             paymentTransactionService.completePayment(payment.getPaymentId(), pgApproveResponseDTO);
+
+            return new PaymentProcessResult(
+                    pgApproveResponseDTO.getPgTransactionId(),
+                    pgApproveResponseDTO.getAuthCode(),
+                    pgApproveResponseDTO.toString(),
+                    PaymentStatus.APPROVED
+            );
         } catch (Exception e) {
             // 예외 발생 시, 실패 확정하지 않고, PENDING 유지
-            return new PaymentApproveResponseDTO(
-                    payment.getPaymentId(),
-                    PaymentStatus.PENDING.name(),
-                    payment.getOrderId(),
-                    payment.getAmount()
+            return new PaymentProcessResult(
+                    PaymentStatus.PENDING
             );
         }
-
-        return toResponse(payment);
     }
 
     @Override
-    public PaymentRefundResponseDTO refund(Payment payment, PaymentRefundRequestDTO request) {
+    public PaymentProcessResult refund(Payment payment, PaymentRefundRequestDTO request) {
         // 1. PG 요청 DTO로 변환
         PgCancelRequestDTO pgCancelRequestDTO = new PgCancelRequestDTO(
                 payment.getPgTransactionId(),
@@ -72,16 +78,14 @@ public class CardPaymentProcessor implements PaymentProcessor {
 
         paymentTransactionService.refundPayment(payment.getPaymentId(), request.getAmount(), pgCancelResponseDTO);
 
-        return new PaymentRefundResponseDTO(
-                payment.getPaymentId(),
-                payment.getStatus().name(),
-                payment.getOrderId(),
-                payment.getAmount()
+        return new PaymentProcessResult(
+                PaymentStatus.REFUNDED,
+                pgCancelResponseDTO.toString()
         );
     }
 
     @Override
-    public PaymentApproveResponseDTO processRetry(Payment payment, PaymentRetryRequestDTO request) {
+    public PaymentProcessResult processRetry(Payment payment, PaymentRetryRequestDTO request) {
         try {
             // 3. PG 요청
             PgApproveRequestDTO pgApproveRequestDTO = new PgApproveRequestDTO(
@@ -95,25 +99,16 @@ public class CardPaymentProcessor implements PaymentProcessor {
 
             // 4. 결과 반영
             paymentTransactionService.completePayment(payment.getPaymentId(), pgApproveResponseDTO);
+
+            return new PaymentProcessResult(
+                    PaymentStatus.PENDING,
+                    pgApproveResponseDTO.toString()
+            );
         } catch (Exception e) {
             // 예외 발생 시, 실패 확정하지 않고, PENDING 유지
-            return new PaymentApproveResponseDTO(
-                    payment.getPaymentId(),
-                    PaymentStatus.PENDING.name(),
-                    payment.getOrderId(),
-                    payment.getAmount()
+            return new PaymentProcessResult(
+                    PaymentStatus.PENDING
             );
         }
-
-        return toResponse(payment);
-    }
-
-    private PaymentApproveResponseDTO toResponse(Payment payment) {
-        return new PaymentApproveResponseDTO(
-                payment.getPaymentId(),
-                payment.getStatus().name(),
-                payment.getOrderId(),
-                payment.getAmount()
-        );
     }
 }

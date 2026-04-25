@@ -1,4 +1,4 @@
-package com.january.ledgerflow.payment.vo;
+package com.january.ledgerflow.payment.domain;
 
 import lombok.Getter;
 
