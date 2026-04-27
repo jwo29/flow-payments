@@ -49,6 +49,14 @@ public class Payment {
         this.status = PaymentStatus.PENDING;
     }
 
+    public void markCompensationFailed() {
+        this.status = PaymentStatus.FAILED;
+    }
+
+    public void markUnknown() {
+        this.status = PaymentStatus.UNKNOWN;
+    }
+
     public boolean canApprove() {
         return this.status == PaymentStatus.REQUESTED;
     }

@@ -1,9 +1,6 @@
 package com.january.ledgerflow.pg;
 
-import com.january.ledgerflow.pg.dto.PgApproveResponseDTO;
-import com.january.ledgerflow.pg.dto.PgApproveRequestDTO;
-import com.january.ledgerflow.pg.dto.PgCancelRequestDTO;
-import com.january.ledgerflow.pg.dto.PgCancelResponseDTO;
+import com.january.ledgerflow.pg.dto.*;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -36,5 +33,13 @@ public class PgClient {
                 .body(cancelRequestDTO)
                 .retrieve()
                 .body(PgCancelResponseDTO.class);
+    }
+
+    public PgInquiryResponseDTO inquiry(String pgTransactionId) {
+        return restClient.get()
+                .uri("/payments/inquiry/" + pgTransactionId)
+                .header("X-PG-API-KEY", pgApiKey)
+                .retrieve()
+                .body(PgInquiryResponseDTO.class);
     }
 }

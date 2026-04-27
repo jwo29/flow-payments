@@ -39,7 +39,7 @@ public class BankTransferPaymentProcessor implements PaymentProcessor {
         // 2. 즉시 승인
         payment.capture();
 
-        return new PaymentProcessResult(PaymentStatus.CAPTURED);
+        return new PaymentProcessResult(true, PaymentStatus.CAPTURED);
     }
 
     @Override
@@ -56,7 +56,7 @@ public class BankTransferPaymentProcessor implements PaymentProcessor {
         // 2. 즉시 승인
         payment.refund(request.getAmount());
 
-        return new PaymentProcessResult(PaymentStatus.REFUNDED);
+        return new PaymentProcessResult(true, PaymentStatus.REFUNDED);
     }
 
     @Override
@@ -73,6 +73,11 @@ public class BankTransferPaymentProcessor implements PaymentProcessor {
         // 2. 즉시 승인
         payment.capture();
 
-        return new PaymentProcessResult(PaymentStatus.CAPTURED);
+        return new PaymentProcessResult(true, PaymentStatus.CAPTURED);
+    }
+
+    @Override
+    public PaymentProcessResult inquiry(String pgTransactionId) {
+        return null;
     }
 }

@@ -9,10 +9,8 @@ import com.january.ledgerflow.payment.dto.PaymentRefundRequestDTO;
 import com.january.ledgerflow.payment.dto.PaymentRetryRequestDTO;
 import com.january.ledgerflow.payment.service.PaymentTransactionService;
 import com.january.ledgerflow.pg.PgClient;
-import com.january.ledgerflow.pg.dto.PgApproveRequestDTO;
-import com.january.ledgerflow.pg.dto.PgApproveResponseDTO;
-import com.january.ledgerflow.pg.dto.PgCancelRequestDTO;
-import com.january.ledgerflow.pg.dto.PgCancelResponseDTO;
+import com.january.ledgerflow.pg.dto.*;
+import io.netty.handler.timeout.TimeoutException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -51,14 +49,22 @@ public class CardPaymentProcessor implements PaymentProcessor {
             paymentTransactionService.completePayment(payment.getPaymentId(), pgApproveResponseDTO);
 
             return new PaymentProcessResult(
+                    true,
                     pgApproveResponseDTO.getPgTransactionId(),
                     pgApproveResponseDTO.getAuthCode(),
                     pgApproveResponseDTO.toString(),
                     PaymentStatus.APPROVED
             );
+        } catch (TimeoutException e) {
+            payment.markUnknown();
+            return new PaymentProcessResult(
+                    true,
+                    PaymentStatus.UNKNOWN
+            );
         } catch (Exception e) {
             // 예외 발생 시, 실패 확정하지 않고, PENDING 유지
             return new PaymentProcessResult(
+                    false,
                     PaymentStatus.PENDING
             );
         }
@@ -79,6 +85,7 @@ public class CardPaymentProcessor implements PaymentProcessor {
         paymentTransactionService.refundPayment(payment.getPaymentId(), request.getAmount(), pgCancelResponseDTO);
 
         return new PaymentProcessResult(
+                true,
                 PaymentStatus.REFUNDED,
                 pgCancelResponseDTO.toString()
         );
@@ -101,14 +108,29 @@ public class CardPaymentProcessor implements PaymentProcessor {
             paymentTransactionService.completePayment(payment.getPaymentId(), pgApproveResponseDTO);
 
             return new PaymentProcessResult(
+                    true,
                     PaymentStatus.PENDING,
                     pgApproveResponseDTO.toString()
             );
         } catch (Exception e) {
             // 예외 발생 시, 실패 확정하지 않고, PENDING 유지
             return new PaymentProcessResult(
+                    false,
                     PaymentStatus.PENDING
             );
         }
+    }
+
+    @Override
+    public PaymentProcessResult inquiry(String pgTransactionId) {
+        // mock pg 호출
+        PgInquiryResponseDTO pgInquiryResponseDTO = pgClient.inquiry(pgTransactionId);
+        return new PaymentProcessResult(
+                true,
+                pgInquiryResponseDTO.getPgTransactionId(),
+                pgInquiryResponseDTO.getAuthCode(),
+                pgInquiryResponseDTO.toString(),
+                PaymentStatus.APPROVED
+        );
     }
 }

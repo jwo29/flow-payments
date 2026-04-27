@@ -4,6 +4,7 @@ import com.january.ledgerflow.payment.domain.Payment;
 import com.january.ledgerflow.payment.domain.PaymentStatus;
 import com.january.ledgerflow.payment.domain.PaymentTransaction;
 import com.january.ledgerflow.payment.dto.*;
+import com.january.ledgerflow.payment.exception.PaymentException;
 import com.january.ledgerflow.payment.processor.PaymentProcessor;
 import com.january.ledgerflow.payment.processor.PaymentProcessorFactory;
 import com.january.ledgerflow.payment.repository.PaymentRepository;
@@ -49,18 +50,79 @@ public class PaymentService {
         // 3. 위임
         PaymentProcessResult paymentProcessResult = processor.process(payment, paymentApproveRequestDTO);
 
-        payment.approve(paymentProcessResult.getPgTransactionId(), paymentProcessResult.getAuthCode());
-        payment.capture(); // 즉시결제 모델
+        if (!paymentProcessResult.isSuccess()) {
+            payment.fail(paymentProcessResult.getRawResponse());
+            // 실패 트랜잭션 저장
+            txRepository.save(PaymentTransaction.builder()
+                    .paymentId(payment.getPaymentId())
+                    .type("APPROVE")
+                    .amount(payment.getAmount())
+                    .status("FAIL")
+                    .pgResponse(paymentProcessResult.getRawResponse())
+                    .build());
+            throw new PaymentException("결제 실패");
+        }
 
-        txRepository.save(PaymentTransaction.builder()
-                .paymentId(payment.getPaymentId())
-                .type("APPROVE")
-                .amount(payment.getAmount())
-                .status("SUCCESS")
-                .pgResponse(paymentProcessResult.getRawResponse())
-                .build());
+        if (paymentProcessResult.getNextStatus() != PaymentStatus.APPROVED) {
+            txRepository.save(PaymentTransaction.builder()
+                    .paymentId(payment.getPaymentId())
+                    .type("APPROVE")
+                    .amount(payment.getAmount())
+                    .status("TIMEOUT")
+                    .pgResponse(paymentProcessResult.getRawResponse())
+                    .build());
+            throw new PaymentException("결제 타임아웃");
+        }
+
+        try {
+            payment.approve(paymentProcessResult.getPgTransactionId(), paymentProcessResult.getAuthCode());
+            payment.capture(); // 즉시결제 모델
+
+            txRepository.save(PaymentTransaction.builder()
+                    .paymentId(payment.getPaymentId())
+                    .type("APPROVE")
+                    .amount(payment.getAmount())
+                    .status("SUCCESS")
+                    .pgResponse(paymentProcessResult.getRawResponse())
+                    .build());
+        } catch (Exception e) {
+            // 보상 트랜잭션
+            compensateApprove(payment, paymentProcessResult);
+            throw e;
+        }
 
         return toResponse(payment);
+    }
+
+    private void compensateApprove(Payment payment, PaymentProcessResult result) {
+        try {
+            PaymentProcessor processor = factory.get(payment.getPaymentMethod());
+            // PG 취소 요청
+            processor.refund(payment, new PaymentRefundRequestDTO(
+                    payment.getPaymentId(),
+                    payment.getAmount(),
+                    result.getRawResponse()
+            ));
+
+            // 상태 변경
+            payment.cancel();
+
+            txRepository.save(PaymentTransaction.builder()
+                    .paymentId(payment.getPaymentId())
+                    .type("COMPENSATE_CANCEL")
+                    .status("SUCCESS")
+                    .build());
+        } catch (Exception e) {
+            // 보상 실패 시 기록하여 재처리 진행
+            txRepository.save(PaymentTransaction.builder()
+                    .paymentId(payment.getPaymentId())
+                    .type("COMPENSATE_CANCEL")
+                    .status("fail")
+                    .build());
+
+            // 상태 표시 (비정상)
+            payment.markCompensationFailed();
+        }
     }
 
     private Payment createPayment(PaymentApproveRequestDTO paymentApproveRequestDTO) {
@@ -137,6 +199,20 @@ public class PaymentService {
                 .build());
 
         return toResponse(payment);
+    }
+
+    public void reconcile(Long paymentId) {
+        Payment payment = paymentRepository.findByPaymentId(paymentId);
+
+        PaymentProcessor processor = factory.get(payment.getPaymentMethod());
+
+        PaymentProcessResult paymentProcessResult = processor.inquiry(payment.getPgTransactionId());
+
+        if (paymentProcessResult.isSuccess()) {
+            payment.capture();
+        } else {
+            payment.cancel();
+        }
     }
 
 }

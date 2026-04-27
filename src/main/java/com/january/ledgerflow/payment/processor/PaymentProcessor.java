@@ -26,4 +26,6 @@ public interface PaymentProcessor {
             PaymentRetryRequestDTO request
     );
 
+    PaymentProcessResult inquiry(String pgTransactionId);
+
 }
