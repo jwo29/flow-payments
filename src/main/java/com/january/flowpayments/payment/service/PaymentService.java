@@ -117,7 +117,7 @@ public class PaymentService {
             txRepository.save(PaymentTransaction.builder()
                     .paymentId(payment.getPaymentId())
                     .type("COMPENSATE_CANCEL")
-                    .status("fail")
+                    .status("FAIL")
                     .build());
 
             // 상태 표시 (비정상)
