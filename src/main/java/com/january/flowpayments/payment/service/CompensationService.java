@@ -9,6 +9,7 @@ import com.january.flowpayments.payment.repository.PaymentRepository;
 import com.january.flowpayments.payment.repository.PaymentTransactionRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,7 +24,7 @@ public class CompensationService {
 
     @Transactional
     public void retryFailedCompensation() {
-        List<PaymentTransaction> failedList = txRepository.findFailedCompensations();
+        List<PaymentTransaction> failedList = txRepository.findFailedCompensations(Pageable.ofSize(50));
 
         for (PaymentTransaction tx : failedList) {
 
