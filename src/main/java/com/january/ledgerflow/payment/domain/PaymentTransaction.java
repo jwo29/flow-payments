@@ -3,11 +3,13 @@ package com.january.ledgerflow.payment.domain;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+@Getter
 @Entity
 @Table(name = "payment_transactions")
 @Builder
@@ -25,6 +27,15 @@ public class PaymentTransaction {
     private String status;
     private String pgResponse;
 
+    private int retryCount;
+
     private LocalDateTime createdAt;
 
+    public void markSuccess() {
+        this.status = "SUCCESS";
+    }
+
+    public void increaseRetryCount() {
+        this.retryCount += 1;
+    }
 }
